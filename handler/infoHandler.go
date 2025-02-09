@@ -1,0 +1,119 @@
+package handler
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"strconv"
+)
+
+func InfoHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		handleGetInfoRequest(w, r)
+	default:
+		http.Error(w, "REST Method '"+r.Method+"' not supported. Currently only '"+http.MethodGet+"' is supported.", http.StatusNotImplemented)
+		return
+	}
+}
+
+func handleGetInfoRequest(w http.ResponseWriter, r *http.Request) {
+	countryCode := r.URL.Path[len("/countryinfo/v1/info/"):]
+
+	limitStr := r.URL.Query().Get("limit")
+	limit := 0 // default value of limit, 0 means no limit
+	if limitStr != ""{
+		var err error
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil {
+			http.Error(w, "Invalid limit parameter: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	res, err := http.Get(fmt.Sprintf("http://129.241.150.113:8080/v3.1/alpha/%s", countryCode))
+	if err != nil {
+		http.Error(w, "Error fetching country info: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Println(countryCode)
+
+	defer res.Body.Close()
+
+
+	countryInfos := make([]CountryInfo, 0)
+
+	if err := json.NewDecoder(res.Body).Decode(&countryInfos); err != nil {
+		http.Error(w, "Error decoding country info: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// checkign if the response contains at least one country
+	if len(countryInfos) == 0{
+		http.Error(w, "No country found for the provided code: "+countryCode, http.StatusNotFound)
+		return
+	}
+
+	countryInfo := countryInfos[0]
+
+	citiesAPI := "http://129.241.150.113:3500/api/v0.1/countries/cities"
+	reqBody, _ := json.Marshal(map[string]string{"country": countryInfo.Name.Common})
+
+	req, err := http.NewRequest("POST", citiesAPI, bytes.NewBuffer(reqBody))
+	if err != nil{
+		http.Error(w, "Error creating request for cities API: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("content-type", "application/json")
+
+	client := &http.Client{}
+	citiesRes, err := client.Do(req)
+	if err != nil {
+		http.Error(w, "Error fetching cities: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	
+
+	/*citiesRes, err := http.Get(fmt.Sprintf("http://129.241.150.113:3500/api/v0.1/countries/%s/cities", countryCode))
+	if err != nil {
+		http.Error(w, "Error fetching cities: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+		*/
+	defer citiesRes.Body.Close()
+	body, err := io.ReadAll(citiesRes.Body)
+	if err != nil {
+		http.Error(w, "Error reading cities response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var citiesData struct {
+		Data []string `json:"data"`
+	}
+	if err := json.Unmarshal(body, &citiesData); err != nil {
+		http.Error(w, "Error decoding cities: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+
+	// aplying limit if specified
+	if limit > 0 && limit < len(citiesData.Data){
+		citiesData.Data = citiesData.Data[:limit]
+	}
+
+
+
+	countryInfo.Cities = citiesData.Data
+
+	w.Header().Add("content-type", "application/json")
+
+	//encoding the response and sending it back
+	encoder := json.NewEncoder(w)
+	if err := encoder.Encode(countryInfo); err != nil {
+		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
