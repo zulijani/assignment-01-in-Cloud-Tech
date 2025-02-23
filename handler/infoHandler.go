@@ -76,13 +76,6 @@ func handleGetInfoRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	
-
-	/*citiesRes, err := http.Get(fmt.Sprintf("http://129.241.150.113:3500/api/v0.1/countries/%s/cities", countryCode))
-	if err != nil {
-		http.Error(w, "Error fetching cities: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-		*/
 	defer citiesRes.Body.Close()
 	body, err := io.ReadAll(citiesRes.Body)
 	if err != nil {
