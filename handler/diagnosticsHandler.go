@@ -16,7 +16,7 @@ func init(){
 func DiagnosticsHandler(w http.ResponseWriter, r *http.Request){
 	switch r.Method {
 	case http.MethodGet:
-		handleGetDiagnosticsRequest(w,r)
+		handleGetDiagnosticsRequest(w)
 	default:
 		http.Error(w, "REST Method '"+r.Method+"' not supported. Currently only '"+http.MethodGet+"' is supported.", http.StatusNotImplemented)
 		return
@@ -24,7 +24,7 @@ func DiagnosticsHandler(w http.ResponseWriter, r *http.Request){
 }
 
 
-func handleGetDiagnosticsRequest(w http.ResponseWriter, r *http.Request){
+func handleGetDiagnosticsRequest(w http.ResponseWriter){
 	countriesNowStatus, err := checkAPIStatus("https://countriesnow.space/api/v0.1/countries/positions/q?iso2=NG")
 	//doing this specific requests because it has small response
 

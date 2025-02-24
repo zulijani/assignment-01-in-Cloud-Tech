@@ -33,7 +33,7 @@ func handleGetInfoRequest(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	res, err := http.Get(fmt.Sprintf("http://129.241.150.113:8080/v3.1/alpha/%s", countryCode))
+	res, err := http.Get(fmt.Sprintf("http://129.241.150.113:8080/v3.1/alpha/%s?fields=name,continents,population,languages,borders,flags,capital", countryCode))
 	if err != nil {
 		http.Error(w, "Error fetching country info: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -43,20 +43,29 @@ func handleGetInfoRequest(w http.ResponseWriter, r *http.Request) {
 	defer res.Body.Close()
 
 
-	countryInfos := make([]CountryInfo, 0)
+	var countryInfo CountryInfo
 
-	if err := json.NewDecoder(res.Body).Decode(&countryInfos); err != nil {
+	if err := json.NewDecoder(res.Body).Decode(&countryInfo); err != nil {
 		http.Error(w, "Error decoding country info: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// checkign if the response contains at least one country
-	if len(countryInfos) == 0{
+	/*if len(countryInfo) == 0{
 		http.Error(w, "No country found for the provided code: "+countryCode, http.StatusNotFound)
 		return
 	}
+	*/
 
-	countryInfo := countryInfos[0]
+	simplifiedCountryInfo := SimplifiedCountryInfo{
+        Name:       countryInfo.Name.Common,
+        Continents: countryInfo.Continents,
+        Population: countryInfo.Population,
+        Languages:  countryInfo.Languages,
+        Borders:    countryInfo.Borders,
+        Flag:       countryInfo.Flags.PNG,
+        Capital:    countryInfo.Capital,
+    }
 
 	citiesAPI := "http://129.241.150.113:3500/api/v0.1/countries/cities"
 	reqBody, _ := json.Marshal(map[string]string{"country": countryInfo.Name.Common})
@@ -99,13 +108,13 @@ func handleGetInfoRequest(w http.ResponseWriter, r *http.Request) {
 
 
 
-	countryInfo.Cities = citiesData.Data
+	simplifiedCountryInfo.Cities = citiesData.Data
 
 	w.Header().Add("content-type", "application/json")
 
 	//encoding the response and sending it back
 	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(countryInfo); err != nil {
+	if err := encoder.Encode(simplifiedCountryInfo); err != nil {
 		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
