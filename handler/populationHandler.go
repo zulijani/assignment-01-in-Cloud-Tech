@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 func PopulationHandler(w http.ResponseWriter, r *http.Request) {
@@ -39,6 +40,7 @@ func handleGetPopulationRequest(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    log.Println(countryName.Name.Common)
     // Parse the optional limit parameter (e.g., "2010-2015")
     limitParam := r.URL.Query().Get("limit")
     var startYear, endYear int

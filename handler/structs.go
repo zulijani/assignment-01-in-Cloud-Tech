@@ -32,7 +32,6 @@ type SimplifiedCountryInfo struct {
 type CountryName struct {
     Name struct {
         Common string `json:"common"`
-        Official string `json:"official"`
     } `json:"name"`
 }
 
@@ -48,8 +47,6 @@ type PopulationResponse struct {
 }
 
 type APIData struct {
-    Country          string           `json:"country"`
-    Code             string           `json:"code"`
     PopulationCounts []PopulationData `json:"populationCounts"`
 }
 

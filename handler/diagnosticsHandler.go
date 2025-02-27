@@ -25,7 +25,7 @@ func DiagnosticsHandler(w http.ResponseWriter, r *http.Request){
 
 
 func handleGetDiagnosticsRequest(w http.ResponseWriter){
-	countriesNowStatus, err := checkAPIStatus("https://countriesnow.space/api/v0.1/countries/positions/q?iso2=NG")
+	countriesNowStatus, err := checkAPIStatus("http://129.241.150.113:3500/api/v0.1/countries/positions/q?iso2=NG")
 	//doing this specific requests because it has small response
 
 	if err != nil {
