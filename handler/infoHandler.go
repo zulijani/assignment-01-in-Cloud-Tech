@@ -1,12 +1,11 @@
 package handler
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -66,36 +65,21 @@ func handleGetInfoRequest(w http.ResponseWriter, r *http.Request) {
         Flag:       countryInfo.Flags.PNG,
         Capital:    countryInfo.Capital,
     }
-
-	citiesAPI := "http://129.241.150.113:3500/api/v0.1/countries/cities"
-	reqBody, _ := json.Marshal(map[string]string{"country": countryInfo.Name.Common})
-
-	req, err := http.NewRequest("POST", citiesAPI, bytes.NewBuffer(reqBody))
-	if err != nil{
-		http.Error(w, "Error creating request for cities API: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	req.Header.Set("content-type", "application/json")
-
-	client := &http.Client{}
-	citiesRes, err := client.Do(req)
-	if err != nil {
-		http.Error(w, "Error fetching cities: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
+	log.Printf("Fetching cities for country: %s", simplifiedCountryInfo.Name)
 	
-	defer citiesRes.Body.Close()
-	body, err := io.ReadAll(citiesRes.Body)
-	if err != nil {
-		http.Error(w, "Error reading cities response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+
+	encodedCountryName := url.QueryEscape(simplifiedCountryInfo.Name)
+	response, err := http.Get(fmt.Sprintf("http://129.241.150.113:3500/api/v0.1/countries/cities/q?country=%s", encodedCountryName ))
+    if err != nil {
+        http.Error(w, "Error fetching country info: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+    defer response.Body.Close()
 
 	var citiesData struct {
 		Data []string `json:"data"`
 	}
-	if err := json.Unmarshal(body, &citiesData); err != nil {
+	if err := json.NewDecoder(response.Body).Decode(&citiesData); err != nil {
 		http.Error(w, "Error decoding cities: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

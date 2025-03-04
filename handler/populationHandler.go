@@ -1,14 +1,13 @@
 package handler
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+    "net/url"
 )
 
 func PopulationHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,39 +61,17 @@ func handleGetPopulationRequest(w http.ResponseWriter, r *http.Request) {
             return
         }
     }
-
-    // Fetch population data from the CountriesNow API
-    apiURL := "http://129.241.150.113:3500/api/v0.1/countries/population"
-    reqBody, err := json.Marshal(map[string]string{"country": countryName.Name.Common})
+    encodedCountryName := url.QueryEscape(countryName.Name.Common)
+    res, err := http.Get(fmt.Sprintf("http://129.241.150.113:3500/api/v0.1/countries/population/q?country=%s", encodedCountryName))
     if err != nil {
-        http.Error(w, "Error encoding request body: "+err.Error(), http.StatusInternalServerError)
-        return
-    }
-
-    req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
-    if err != nil {
-        http.Error(w, "Error creating request to CountriesNow API: "+err.Error(), http.StatusInternalServerError)
-        return
-    }
-    req.Header.Set("content-type", "application/json")
-
-    client := &http.Client{}
-    res, err := client.Do(req)
-    if err != nil {
-        http.Error(w, "Error fetching population data: "+err.Error(), http.StatusInternalServerError)
+        http.Error(w, "Error fetching country info: "+err.Error(), http.StatusInternalServerError)
         return
     }
     defer res.Body.Close()
 
-    body, err := io.ReadAll(res.Body)
-    if err != nil {
-        http.Error(w, "Error reading population data: "+err.Error(), http.StatusInternalServerError)
-        return
-    }
-
     var apiResponse APIResponse
-    if err := json.Unmarshal(body, &apiResponse); err != nil {
-        http.Error(w, "Error decoding population data: "+err.Error(), http.StatusInternalServerError)
+    if err := json.NewDecoder(res.Body).Decode(&apiResponse); err != nil {
+        http.Error(w, "Error decoding country info: "+err.Error(), http.StatusInternalServerError)
         return
     }
 
